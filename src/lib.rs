@@ -1,6 +1,11 @@
+
+mod bwt;
+mod rle;
 use std::{error::Error};
 use std::io::prelude::*;
 use std::fs;
+
+use bwt::*;
 pub struct Config {
     pub in_file: String,
     pub out_file: String,
@@ -8,28 +13,23 @@ pub struct Config {
 
 pub fn compress(config: &Config)-> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.in_file.clone())?;
-    let binary_contents = contents.as_bytes();
+    let binary_contents = contents.as_bytes().to_vec();
+    
+    let compressed_contents = burrows_wheeler_slow(binary_contents);
 
-    let mut pos = 0;
     let mut buffer = fs::File::create(config.out_file.clone())?;
 
-    while pos < contents.len() {
-        let bytes_written = buffer.write(&binary_contents[pos..])?;
-        pos += bytes_written;
-    }
+    buffer.write_all(&compressed_contents)?;
     Ok(())
 }
 pub fn decompress(config: &Config)-> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(config.in_file.clone())?;
-    let binary_contents = contents.as_bytes();
+    let binary_contents = std::fs::read(config.in_file.clone())?;
+    let decompressed_contents = inv_burrows_wheeler_slow(binary_contents);
+    println!("decom:{:?}",decompressed_contents);
 
-    let mut pos = 0;
     let mut buffer = fs::File::create(config.out_file.clone())?;
 
-    while pos < contents.len() {
-        let bytes_written = buffer.write(&binary_contents[pos..])?;
-        pos += bytes_written;
-    }
+    buffer.write_all(&decompressed_contents)?;
     Ok(())
 }
 
@@ -85,19 +85,19 @@ mod tests {
 
         let text_file: &str = "test_data_2";
         
-        let input_path = format!("input/{}.txt",text_file);
+        let text_path = format!("input/{}.txt",text_file);
         let output_path = format!("compressed/{}.cmprs",text_file);  
 
-        let conf = Config{ in_file: input_path.clone(),out_file: output_path.clone()};
+        let conf = Config{ in_file: text_path.clo ne(),out_file: output_path.clone()};
         compress(&conf).unwrap();
 
 
-        let input_path = format!("input/{}.txt",text_file);
+        let input_path = format!("compressed/{}.cmprs",text_file);
         let output_path = format!("decompressed/{}.txt",text_file);
 
         let conf_2 = Config{ in_file: input_path.clone(),out_file: output_path.clone()};
         decompress(&conf_2).unwrap();
-        assert_eq!(diff(&input_path,&output_path),true);
+        assert_eq!(diff(&text_path,&output_path),true);
     }
 
 
